@@ -1,88 +1,83 @@
-//
-//  ContentView.swift
-//  LayoutWithSwiftUI
-//
-//  Created by Abdullah Karaboğa on 17.12.2022.
-//
-
 import SwiftUI
-import CoreData
+
 
 struct ContentView: View {
-    @Environment(\.managedObjectContext) private var viewContext
+    @State var tags: [Tag] = rawTags.compactMap { tag -> Tag? in
+        return .init(name: tag)
 
-    @FetchRequest(
-        sortDescriptors: [NSSortDescriptor(keyPath: \Item.timestamp, ascending: true)],
-        animation: .default)
-    private var items: FetchedResults<Item>
-
+    }
     var body: some View {
-        NavigationView {
-            List {
-                ForEach(items) { item in
-                    NavigationLink {
-                        Text("Item at \(item.timestamp!, formatter: itemFormatter)")
-                    } label: {
-                        Text(item.timestamp!, formatter: itemFormatter)
+        NavigationStack {
+            VStack {
+                TagView(aligment: .center, spacing: 10) {
+                    ForEach($tags) { $tag in
+                        Toggle(tag.name, isOn: $tag.isSelected).toggleStyle(.button).buttonStyle(.bordered).tint(.red)
                     }
+
                 }
-                .onDelete(perform: deleteItems)
-            }
-            .toolbar {
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    EditButton()
-                }
-                ToolbarItem {
-                    Button(action: addItem) {
-                        Label("Add Item", systemImage: "plus")
-                    }
-                }
-            }
-            Text("Select an item")
-        }
-    }
 
-    private func addItem() {
-        withAnimation {
-            let newItem = Item(context: viewContext)
-            newItem.timestamp = Date()
 
-            do {
-                try viewContext.save()
-            } catch {
-                // Replace this implementation with code to handle the error appropriately.
-                // fatalError() causes the application to generate a crash log and terminate. You should not use this function in a shipping application, although it may be useful during development.
-                let nsError = error as NSError
-                fatalError("Unresolved error \(nsError), \(nsError.userInfo)")
-            }
-        }
-    }
 
-    private func deleteItems(offsets: IndexSet) {
-        withAnimation {
-            offsets.map { items[$0] }.forEach(viewContext.delete)
-
-            do {
-                try viewContext.save()
-            } catch {
-                // Replace this implementation with code to handle the error appropriately.
-                // fatalError() causes the application to generate a crash log and terminate. You should not use this function in a shipping application, although it may be useful during development.
-                let nsError = error as NSError
-                fatalError("Unresolved error \(nsError), \(nsError.userInfo)")
-            }
+            }.padding(15).navigationTitle(Text("Layouts"))
         }
     }
 }
 
-private let itemFormatter: DateFormatter = {
-    let formatter = DateFormatter()
-    formatter.dateStyle = .short
-    formatter.timeStyle = .medium
-    return formatter
-}()
+struct TagView: Layout {
+    var aligment: Alignment = .center
+    var spacing: CGFloat = 10
+
+    init(aligment: Alignment, spacing: CGFloat) {
+        self.aligment = aligment
+        self.spacing = spacing
+    }
+
+
+    func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
+        return .init(width: proposal.width ?? 0, height: proposal.height ?? 0)
+    }
+
+    func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) {
+        
+        
+        
+        var origin = bounds.origin
+        var maxWidth = bounds.width
+        
+        subviews.forEach { view in
+            let viewSize = view.sizeThatFits(proposal)
+            view.place(at: origin, proposal: proposal)
+            origin.x += (viewSize.width + spacing)
+        }
+
+    }
+
+
+}
 
 struct ContentView_Previews: PreviewProvider {
     static var previews: some View {
-        ContentView().environment(\.managedObjectContext, PersistenceController.preview.container.viewContext)
+        ContentView()
     }
+}
+
+var rawTags: [String] = [
+
+    "SwiftUI",
+    "Xcode",
+    "Flutter",
+    "Android Studio",
+    "iOS",
+    "Dart",
+    "macOS",
+    "API",
+    "Apple",
+    "Android",
+
+]
+
+struct Tag: Identifiable {
+    var id = UUID().uuidString
+    var name: String
+    var isSelected: Bool = false
 }
